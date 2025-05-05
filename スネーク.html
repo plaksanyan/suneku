@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>suneku</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sawarabi+Gothic&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background-color: #fff0f5;
+      font-family: 'Sawarabi Gothic', sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 180px;
+      background-color: #ffe4f0;
+      padding: 15px;
+      box-shadow: -3px 0 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    select {
+      width: 100%;
+      padding: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    #container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    #score-box {
+      background-color: #ffb6c1;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 0 10px #ff69b4;
+    }
+
+    canvas {
+      background-color: #ffffff;
+      border: 4px dashed #ff69b4;
+    }
+
+    #music-button {
+      margin-top: 10px;
+      font-size: 16px;
+      background: #ffe4e1;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #8a2be2;
+      transition: background 0.3s;
+    }
+
+    #music-button:hover {
+      background: #fcd4e0;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <div id="score-box">🍓 スコア <span id="score">0</span></div>
+    <canvas id="game" width="400" height="400"></canvas>
+    <button id="music-button">♪ 音楽 ♪</button>
+    <!-- Используем локальный файл -->
+    <audio id="bg-music" loop>
+      <source src="ruki-vverh.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+
+  <div id="sidebar">
+    <label>ヘビの皮:</label>
+    <select id="skin-select">
+      <option value="🎀">🎀 弓 </option>
+      <option value="🐉">🐉 ドラゴン</option>
+      <option value="💀">💀 スケルトン</option>
+    </select>
+
+    <label>食事:</label>
+    <select id="food-select">
+      <option value="🍓">🍓 いちご </option>
+      <option value="🫐">🫐 ブルーベリー</option>
+      <option value="🍇">🍇 ぶどう</option>
+      <option value="🍑">🍑 桃</option>
+    </select>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreSpan = document.getElementById("score");
+    const foodSelect = document.getElementById("food-select");
+    const skinSelect = document.getElementById("skin-select");
+    const musicBtn = document.getElementById("music-button");
+    const bgMusic = document.getElementById("bg-music");
+
+    const gridSize = 20;
+    let snake = [{x: 160, y: 200}];
+    let dx = gridSize;
+    let dy = 0;
+    let food = spawnFood();
+    let score = 0;
+    let gameOver = false;
+
+    function spawnFood() {
+      const x = Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize;
+      const y = Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize;
+      return {x, y};
+    }
+
+    function drawEmoji(x, y, emoji) {
+      ctx.font = "20px serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(emoji, x + gridSize / 2, y + gridSize / 2);
+    }
+
+    function drawSnake() {
+      const skin = skinSelect.value;
+      snake.forEach(part => drawEmoji(part.x, part.y, skin));
+    }
+
+    function drawFood() {
+      const foodIcon = foodSelect.value;
+      drawEmoji(food.x, food.y, foodIcon);
+    }
+
+    function updateScore() {
+      scoreSpan.textContent = score;
+      document.getElementById("score-box").innerHTML = `${foodSelect.value} スコア: <span id="score">${score}</span>`;
+    }
+
+    function move() {
+      const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        food = spawnFood();
+        score++;
+        updateScore();
+      } else {
+        snake.pop();
+      }
+    }
+
+    function checkCollision() {
+      const head = snake[0];
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+        return true;
+      }
+      for (let i = 1; i < snake.length; i++) {
+        if (head.x === snake[i].x && head.y === snake[i].y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function gameLoop() {
+      if (gameOver) {
+        alert("ну ты проиграл ло, собрал кстати: " + score);
+        document.location.reload();
+        return;
+      }
+
+      setTimeout(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        move();
+        gameOver = checkCollision();
+        drawFood();
+        drawSnake();
+        gameLoop();
+      }, 150);
+    }
+
+    document.addEventListener("keydown", e => {
+      switch (e.key) {
+        case "ArrowUp": if (dy === 0) { dx = 0; dy = -gridSize; } break;
+        case "ArrowDown": if (dy === 0) { dx = 0; dy = gridSize; } break;
+        case "ArrowLeft": if (dx === 0) { dx = -gridSize; dy = 0; } break;
+        case "ArrowRight": if (dx === 0) { dx = gridSize; dy = 0; } break;
+      }
+    });
+
+    musicBtn.addEventListener("click", () => {
+      bgMusic.play().catch(() => alert("музика не робит :(( )"));
+    });
+
+    gameLoop();
+  </script>
+</body>
+</html>
